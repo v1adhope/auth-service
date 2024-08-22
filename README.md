@@ -49,5 +49,5 @@ resp
 
 ```errs
 internal
-not valid tokens
+not valid token pair
 ```
