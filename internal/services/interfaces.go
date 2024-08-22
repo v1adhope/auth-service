@@ -22,7 +22,7 @@ type Hasher interface {
 
 type TokenManager interface {
 	GeneratePair(id string, ip string) (models.TokenPair, error)
-	RefreshPair(tp models.TokenPair) (newTp models.TokenPair, isIpChanged bool, err error)
+	RefreshPair(tp models.TokenPair, ip string) (newTp models.TokenPair, isIpChanged bool, err error)
 }
 
 type Validater interface {

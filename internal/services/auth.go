@@ -38,7 +38,7 @@ func (s *Auth) TokenPair(ctx context.Context, id string, ip string) (models.Toke
 	return tp, nil
 }
 
-func (s *Auth) RefreshTokenPair(ctx context.Context, tp models.TokenPair) (models.TokenPair, error) {
+func (s *Auth) RefreshTokenPair(ctx context.Context, tp models.TokenPair, ip string) (models.TokenPair, error) {
 	storeToken, err := s.makeAuthStoreToken(tp)
 	if err != nil {
 		return models.TokenPair{}, err
@@ -50,7 +50,7 @@ func (s *Auth) RefreshTokenPair(ctx context.Context, tp models.TokenPair) (model
 	}
 
 	// TODO: might be ErrNotValidTokens
-	newTp, isIpChanged, err := s.TokenManager.RefreshPair(tp)
+	newTp, isIpChanged, err := s.TokenManager.RefreshPair(tp, ip)
 	if err != nil {
 		return models.TokenPair{}, err
 	}
