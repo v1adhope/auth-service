@@ -22,5 +22,5 @@ type TokenManager interface {
 }
 
 type Validater interface {
-	ValideGuid(id string) error
+	ValidateGuid(target string) error
 }

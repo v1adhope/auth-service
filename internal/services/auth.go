@@ -16,7 +16,7 @@ type Auth struct {
 
 func (s *Auth) TokenPair(id string, ip string) (models.TokenPair, error) {
 	// TODO: might be ErrNotValidGuid
-	if err := s.Validator.ValideGuid(id); err != nil {
+	if err := s.Validator.ValidateGuid(id); err != nil {
 		return models.TokenPair{}, err
 	}
 
