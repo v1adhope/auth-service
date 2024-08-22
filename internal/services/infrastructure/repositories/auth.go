@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/v1adhope/auth-service/internal/models"
@@ -18,11 +19,11 @@ func (r *Auth) Store(ctx context.Context, token string) error {
 			"token": token,
 		}).ToSql()
 	if err != nil {
-		return err
+		return fmt.Errorf("repositories: auth: Store: ToSql: %w", err)
 	}
 
 	if _, err := r.Pool.Exec(ctx, sql, args...); err != nil {
-		return err
+		return fmt.Errorf("repositories: auth: Store: Exec: %w", err)
 	}
 
 	return nil
@@ -38,13 +39,13 @@ func (r *Auth) Check(ctx context.Context, token string) error {
 		Suffix(")").
 		ToSql()
 	if err != nil {
-		return err
+		return fmt.Errorf("repositories: auth: Check: ToSql: %w", err)
 	}
 
 	ok := true
 
 	if err := r.Pool.QueryRow(ctx, sql, args...).Scan(&ok); err != nil {
-		return err
+		return fmt.Errorf("repositories: auth: Check: Scan: %w", err)
 	}
 
 	if !ok {
@@ -61,11 +62,11 @@ func (r *Auth) Destroy(ctx context.Context, token string) error {
 		}).
 		ToSql()
 	if err != nil {
-		return err
+		return fmt.Errorf("repositories: auth: Destroy: ToSql: %w", err)
 	}
 
 	if _, err := r.Pool.Exec(ctx, sql, args...); err != nil {
-		return err
+		return fmt.Errorf("repositories: auth: Destroy: Exec: %w", err)
 	}
 
 	return nil

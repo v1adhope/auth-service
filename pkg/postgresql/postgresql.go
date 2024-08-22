@@ -20,11 +20,11 @@ type Config struct {
 func Build(ctx context.Context, cfg Config) (*Postgres, error) {
 	pool, err := pgxpool.New(ctx, cfg.ConnStr)
 	if err != nil {
-		return nil, fmt.Errorf("postgresql: can't create pool: %w", err)
+		return nil, fmt.Errorf("postgresql: postgresql: Build: New: %w", err)
 	}
 
 	if err := pool.Ping(ctx); err != nil {
-		return nil, fmt.Errorf("postgresql: can't ping pool: %w", err)
+		return nil, fmt.Errorf("postgresql: postgresql: Build: Ping: %w", err)
 	}
 
 	builder := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar)
