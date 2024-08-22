@@ -1,15 +1,19 @@
 package services
 
-import "github.com/v1adhope/auth-service/internal/models"
+import (
+	"context"
+
+	"github.com/v1adhope/auth-service/internal/models"
+)
 
 type Allerter interface {
 	Do(email, msg string) error
 }
 
 type AuthRepo interface {
-	Store(token string) error
-	Check(token string) error
-	Destroy(token string) error
+	Store(ctx context.Context, token string) error
+	Check(ctx context.Context, token string) error
+	Destroy(ctx context.Context, token string) error
 }
 
 type Hasher interface {

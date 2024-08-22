@@ -1,11 +1,18 @@
 version: '3'
 
+env:
+  APP_NETWORK: auth-service_default
+  POSTGRES_PASSWORD: secret
+  POSTGRES_USER: rat
+  POSTGRES_DB: auth_service
+  POSTGRES_MIGRATE_NUMBER: 1
+
 tasks:
   build:
     cmds:
       - go mod tidy
       - go mod verify
-      - go build -o
+      # - go build -o
 
   tests:
     cmds:
@@ -14,3 +21,23 @@ tasks:
   test-by-name:
     cmds:
       - go test --race --run "{{.TNAME}}" ./...
+
+  compose-up:
+    cmds:
+      - docker compose up -d
+
+  compose-down:
+    cmds:
+      - docker compose down
+
+  migrate-up:
+    cmds:
+      - ./scripts/tasks/migrate-up.sh
+
+  migrate-down:
+    cmds:
+      - ./scripts/tasks/migrate-down.sh
+
+  migrate-force:
+    cmds:
+      - ./scripts/tasks/migrate-force.sh

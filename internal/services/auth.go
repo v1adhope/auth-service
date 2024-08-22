@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/v1adhope/auth-service/internal/models"
@@ -14,7 +15,7 @@ type Auth struct {
 	Allert       Allerter
 }
 
-func (s *Auth) TokenPair(id string, ip string) (models.TokenPair, error) {
+func (s *Auth) TokenPair(ctx context.Context, id string, ip string) (models.TokenPair, error) {
 	// TODO: might be ErrNotValidGuid
 	if err := s.Validator.ValidateGuid(id); err != nil {
 		return models.TokenPair{}, err
@@ -30,21 +31,21 @@ func (s *Auth) TokenPair(id string, ip string) (models.TokenPair, error) {
 		return models.TokenPair{}, err
 	}
 
-	if err := s.AuthRepo.Store(storeToken); err != nil {
+	if err := s.AuthRepo.Store(ctx, storeToken); err != nil {
 		return models.TokenPair{}, err
 	}
 
 	return tp, nil
 }
 
-func (s *Auth) RefreshTokenPair(tp models.TokenPair) (models.TokenPair, error) {
+func (s *Auth) RefreshTokenPair(ctx context.Context, tp models.TokenPair) (models.TokenPair, error) {
 	storeToken, err := s.makeAuthStoreToken(tp)
 	if err != nil {
 		return models.TokenPair{}, err
 	}
 
 	// TODO: might be internal or ErrNotValidTokens
-	if err := s.AuthRepo.Check(storeToken); err != nil {
+	if err := s.AuthRepo.Check(ctx, storeToken); err != nil {
 		return models.TokenPair{}, err
 	}
 
@@ -61,7 +62,7 @@ func (s *Auth) RefreshTokenPair(tp models.TokenPair) (models.TokenPair, error) {
 		}
 	}
 
-	if err := s.AuthRepo.Destroy(storeToken); err != nil {
+	if err := s.AuthRepo.Destroy(ctx, storeToken); err != nil {
 		return models.TokenPair{}, err
 	}
 
