@@ -1,6 +1,6 @@
 package models
 
 type TokenPair struct {
-	Access  string
-	Refresh string
+	Access  string `json:"accessToken"`
+	Refresh string `json:"refreshToken"`
 }

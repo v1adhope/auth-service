@@ -1,5 +1,7 @@
 # Draft
 
+REST
+
 `access JWT SHA512`
 
 `refresh base64` store as `bcrypt hash` can be used only once

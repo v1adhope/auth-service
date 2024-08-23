@@ -15,7 +15,7 @@ type Auth struct {
 	Allert       Allerter
 }
 
-func (s *Auth) TokenPair(ctx context.Context, id string, ip string) (models.TokenPair, error) {
+func (s *Auth) GenerateTokenPair(ctx context.Context, id string, ip string) (models.TokenPair, error) {
 	// TODO: might be ErrNotValidGuid
 	if err := s.Validator.ValidateGuid(id); err != nil {
 		return models.TokenPair{}, err
