@@ -1,14 +1,18 @@
 package httpv1
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+	"github.com/v1adhope/auth-service/internal/services"
+)
 
 type Router struct {
-	as  AuthService
+	as  *services.Services
 	log Logger
 }
 
 func New(
-	as AuthService,
+	as *services.Services,
 	log Logger,
 ) *Router {
 	return &Router{
@@ -17,10 +21,19 @@ func New(
 	}
 }
 
-func (r *Router) New() *gin.Engine {
+func (r *Router) Handler(opts ...Option) *gin.Engine {
+	cfg := config(opts...)
+
+	gin.SetMode(cfg.Mode)
+
 	e := gin.New()
 
-	e.Use(gin.Logger(), gin.Recovery(), corsHandler(), errorsHandler(r.log))
+	e.Use(
+		gin.Logger(),
+		gin.Recovery(),
+		cors.New(cfg.Cors),
+		errorsHandler(r.log),
+	)
 
 	apiG := e.Group("/v1")
 	{

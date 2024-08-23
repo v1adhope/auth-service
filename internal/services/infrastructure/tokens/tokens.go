@@ -1,19 +1,15 @@
 package tokens
 
 import (
-	"encoding/base64"
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/v1adhope/auth-service/internal/models"
+	"github.com/v1adhope/auth-service/pkg/serialization"
 )
-
-type Config struct {
-	Access  Acccess
-	Refresh Refresh
-	Issuer  string
-}
 
 type Tokens struct {
 	access  Acccess
@@ -22,12 +18,12 @@ type Tokens struct {
 }
 
 type Acccess struct {
-	Ttl int
-	Key string
+	ttl time.Duration
+	key []byte
 }
 
 type Refresh struct {
-	Key string
+	key []byte
 }
 
 type accessClaims struct {
@@ -35,45 +31,63 @@ type accessClaims struct {
 	jwt.RegisteredClaims
 }
 
-func New(cfg Config) *Tokens {
-	return &Tokens{
+// INFO: panic if access or refresh keys not defined
+func New(opts ...Option) *Tokens {
+	t := &Tokens{
 		access: Acccess{
-			Ttl: cfg.Access.Ttl,
-			Key: cfg.Access.Key,
+			ttl: time.Duration(20 * time.Second),
 		},
-		refresh: Refresh{
-			Key: cfg.Refresh.Key,
-		},
-		issuer: cfg.Issuer,
+		refresh: Refresh{},
+		issuer:  "auth-service",
 	}
+
+	for _, opt := range opts {
+		opt(t)
+	}
+
+	if t.access.key == nil {
+		panic("tokens: define access key")
+	}
+
+	if t.refresh.key == nil {
+		panic("tokens: define refresh key")
+	}
+
+	return t
 }
 
-func (t *Tokens) GeneratePair(id string, ip string) (models.TokenPair, error) {
-	accessT, err := t.generateAccess(id, ip)
+func (t *Tokens) GeneratePair(userId string, ip string) (models.TokenPair, error) {
+	id, err := uuid.NewV6()
+	if err != nil {
+		return models.TokenPair{}, fmt.Errorf("tokens: tokens: GeneratePair: NewV6: %w", err)
+	}
+
+	accessT, err := t.generateAccess(userId, ip, id.String())
 	if err != nil {
 		return models.TokenPair{}, err
 	}
 
-	refreshT, err := t.generateRefresh()
+	refreshT, err := t.generateRefresh(id.String())
 	if err != nil {
 		return models.TokenPair{}, err
 	}
 
-	return models.TokenPair{accessT, refreshT}, nil
+	return models.TokenPair{id.String(), accessT, refreshT}, nil
 }
 
-func (t *Tokens) generateAccess(id string, ip string) (string, error) {
+func (t *Tokens) generateAccess(userId string, ip string, id string) (string, error) {
 	claims := accessClaims{
 		Ip: ip,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(t.access.Ttl) * time.Second)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(t.access.ttl)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			Issuer:    t.issuer,
-			Subject:   id,
+			Subject:   userId,
+			ID:        id,
 		},
 	}
 
-	accessT, err := jwt.NewWithClaims(jwt.SigningMethodHS512, claims).SignedString(t.access.Key)
+	accessT, err := jwt.NewWithClaims(jwt.SigningMethodHS512, claims).SignedString(t.access.key)
 	if err != nil {
 		return "", fmt.Errorf("tokens: tokens: generateAccess: SignedString: %w", err)
 	}
@@ -81,55 +95,69 @@ func (t *Tokens) generateAccess(id string, ip string) (string, error) {
 	return accessT, nil
 }
 
-// INFO: NotBefore brute force protection
-func (t *Tokens) generateRefresh() (string, error) {
-	claims := jwt.RegisteredClaims{
-		IssuedAt: jwt.NewNumericDate(time.Now()),
-		// NotBefore: jwt.NewNumericDate(time.Now().Add(time.Duration(t.access.ttl) * time.Second)),
-		Issuer: t.issuer,
-	}
-
-	ss, err := jwt.NewWithClaims(jwt.SigningMethodHS512, &claims).SignedString(t.refresh.Key)
+func (t *Tokens) generateRefresh(id string) (string, error) {
+	ciphertext, err := serialization.EncryptByGcm([]byte(id), t.refresh.key)
 	if err != nil {
-		return "", fmt.Errorf("tokens: tokens: generateRefresh: SignedString: %w", err)
+		return "", err
 	}
 
-	refreshT := base64.StdEncoding.EncodeToString([]byte(ss))
-
-	return refreshT, nil
+	return string(ciphertext), err
 }
 
-func (t *Tokens) RefreshPair(tp models.TokenPair, ip string) (newTp models.TokenPair, isIpChanged bool, err error) {
-	claims, err := t.ParseAccess(tp.Access)
+func (t *Tokens) ExtractRefreshPayload(token string) (string, error) {
+	text, err := serialization.DecryptByGcm([]byte(token), t.refresh.key)
 	if err != nil {
-		return models.TokenPair{}, false, err
+		return "", models.ErrNotValidTokens
 	}
 
-	err = t.ParseRefresh(tp.Refresh)
-	if err != nil {
-		return models.TokenPair{}, false, err
-	}
-
-	id, tokenIp := t.extractUsefulClaims(claims)
-	if tokenIp != ip {
-		isIpChanged = true
-	}
-
-	newTp, err = t.GeneratePair(id, ip)
-	if err != nil {
-		return models.TokenPair{}, false, err
-	}
-
-	return newTp, false, nil
+	return string(text), nil
 }
 
-func (t *Tokens) ParseAccess(target string) (accessClaims, error) {
-	accessT, err := jwt.Parse(target, func(token *jwt.Token) (interface{}, error) {
+func (t *Tokens) ExtractAccessPayload(token string) (userId, id, ip string, err error) {
+	claims, err := t.parseAccess(token)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	userId, id, ip = t.extractUsefulClaims(claims)
+
+	return userId, id, ip, nil
+}
+
+//	func (t *Tokens) RefreshPair(tp models.TokenPair, ip string) (newTp models.TokenPair, isIpChanged bool, err error) {
+//		claims, err := t.parseAccess(tp.Access)
+//		if err != nil {
+//			return models.TokenPair{}, false, err
+//		}
+//
+//		refreshT, err := t.parseRefresh(tp.Refresh)
+//		if err != nil {
+//			return models.TokenPair{}, false, err
+//		}
+//
+//		id, tokenIp, tpId := t.extractUsefulClaims(claims)
+//		if refreshT != tpId {
+//			return models.TokenPair{}, false, models.ErrNotValidTokens
+//		}
+//
+//		if tokenIp != ip {
+//			isIpChanged = true
+//		}
+//
+//		newTp, err = t.GeneratePair(id, ip)
+//		if err != nil {
+//			return models.TokenPair{}, false, err
+//		}
+//
+//		return newTp, false, nil
+//	}
+func (t *Tokens) parseAccess(target string) (accessClaims, error) {
+	accessT, err := jwt.ParseWithClaims(target, &accessClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, models.ErrNotValidTokens
 		}
 
-		return []byte(t.access.Key), nil
+		return []byte(t.access.key), nil
 	})
 	if err != nil {
 		return accessClaims{}, fmt.Errorf("tokens: tokens: ParseAccess: Parse: %w", err)
@@ -143,26 +171,16 @@ func (t *Tokens) ParseAccess(target string) (accessClaims, error) {
 	return *claims, nil
 }
 
-func (t *Tokens) extractUsefulClaims(claims accessClaims) (id, ip string) {
-	return claims.Subject, claims.Ip
+func (t *Tokens) extractUsefulClaims(claims accessClaims) (userId, id, ip string) {
+	return claims.Subject, claims.ID, claims.Ip
 }
 
-func (t *Tokens) ParseRefresh(target string) error {
-	decodeTarget, err := base64.StdEncoding.DecodeString(target)
-	if err != nil {
-		return models.ErrNotValidTokens
-	}
-
-	_, err = jwt.Parse(string(decodeTarget), func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, models.ErrNotValidTokens
-		}
-
-		return []byte(t.refresh.Key), nil
-	})
-	if err != nil {
-		return fmt.Errorf("tokens: tokens: ParseRefresh: Parse: %w", err)
-	}
-
-	return nil
-}
+//
+// func (t *Tokens) parseRefresh(target string) (string, error) {
+// 	text, err := serialization.DecryptByGcm([]byte(target), t.refresh.key)
+// 	if err != nil {
+// 		return "", err
+// 	}
+//
+// 	return string(text), nil
+// }

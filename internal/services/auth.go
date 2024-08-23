@@ -2,80 +2,90 @@ package services
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/v1adhope/auth-service/internal/models"
 )
 
-type Auth struct {
-	Validator    Validater
-	TokenManager TokenManager
-	Hash         Hasher
-	AuthRepo     AuthRepo
-	Allert       Allerter
-}
-
-func (s *Auth) GenerateTokenPair(ctx context.Context, id string, ip string) (models.TokenPair, error) {
-	// TODO: might be ErrNotValidGuid
-	if err := s.Validator.ValidateGuid(id); err != nil {
+func (s *Services) GenerateTokenPair(ctx context.Context, userId string, ip string) (models.TokenPair, error) {
+	if err := s.Validator.ValidateGuid(userId); err != nil {
 		return models.TokenPair{}, err
 	}
 
-	tp, err := s.TokenManager.GeneratePair(id, ip)
+	tp, err := s.TokenManager.GeneratePair(userId, ip)
 	if err != nil {
 		return models.TokenPair{}, err
 	}
 
-	storeToken, err := s.makeAuthStoreToken(tp)
+	storeT, err := s.Hash.Do(tp.Refresh)
 	if err != nil {
 		return models.TokenPair{}, err
 	}
 
-	if err := s.AuthRepo.Store(ctx, storeToken); err != nil {
+	if err := s.AuthRepo.StoreToken(ctx, tp.Id, storeT); err != nil {
 		return models.TokenPair{}, err
 	}
+
+	tp.Refresh = EncodeBase64(tp.Refresh)
 
 	return tp, nil
 }
 
-func (s *Auth) RefreshTokenPair(ctx context.Context, tp models.TokenPair, ip string) (models.TokenPair, error) {
-	storeToken, err := s.makeAuthStoreToken(tp)
+func (s *Services) RefreshTokenPair(ctx context.Context, tp models.TokenPair, ip string) (models.TokenPair, error) {
+	var err error
+
+	tp.Refresh, err = DecodeBase64(tp.Refresh)
 	if err != nil {
 		return models.TokenPair{}, err
 	}
 
-	// TODO: might be internal or ErrNotValidTokens
-	if err := s.AuthRepo.Check(ctx, storeToken); err != nil {
-		return models.TokenPair{}, err
-	}
-
-	// TODO: might be ErrNotValidTokens
-	newTp, isIpChanged, err := s.TokenManager.RefreshPair(tp, ip)
+	tp.Id, err = s.TokenManager.ExtractRefreshPayload(tp.Refresh)
 	if err != nil {
 		return models.TokenPair{}, err
 	}
 
-	// INFO: should be req getEmailByUserId
-	if isIpChanged {
-		if err := s.Allert.Do("<SOME_EMAIL>", "<SOME_MSG>"); err != nil {
+	storeT, err := s.AuthRepo.GetToken(ctx, tp.Id)
+	if err != nil {
+		return models.TokenPair{}, err
+	}
+
+	if err := s.Hash.Check(storeT, tp.Refresh); err != nil {
+		return models.TokenPair{}, models.ErrNotValidTokens
+	}
+
+	userId, idAccessT, ipAccessT, err := s.TokenManager.ExtractAccessPayload(tp.Access)
+	if err != nil {
+		return models.TokenPair{}, models.ErrNotValidTokens
+	}
+
+	if idAccessT != tp.Id {
+		return models.TokenPair{}, models.ErrNotValidTokens
+	}
+
+	if ip != ipAccessT {
+		if err := s.Alert.Do("<SOME_EMAIL>", "<SOME_MSG>"); err != nil {
 			return models.TokenPair{}, err
 		}
 	}
 
-	if err := s.AuthRepo.Destroy(ctx, storeToken); err != nil {
+	if err := s.AuthRepo.DestroyToken(ctx, tp.Id); err != nil {
 		return models.TokenPair{}, err
 	}
 
-	return newTp, nil
-}
-
-func (s *Auth) makeAuthStoreToken(tp models.TokenPair) (string, error) {
-	str := fmt.Sprintf("%s:%s", tp.Access, tp.Refresh)
-
-	storeToken, err := s.Hash.Do(str)
+	newTp, err := s.TokenManager.GeneratePair(userId, ip)
 	if err != nil {
-		return "", err
+		return models.TokenPair{}, err
 	}
 
-	return storeToken, nil
+	storeT, err = s.Hash.Do(newTp.Refresh)
+	if err != nil {
+		return models.TokenPair{}, err
+	}
+
+	if err := s.AuthRepo.StoreToken(ctx, newTp.Id, storeT); err != nil {
+		return models.TokenPair{}, err
+	}
+
+	newTp.Refresh = EncodeBase64(newTp.Refresh)
+
+	return newTp, nil
 }

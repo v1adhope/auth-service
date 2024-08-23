@@ -54,7 +54,10 @@ func (r *authRouter) refreshTokenPair(c *gin.Context) {
 		return
 	}
 
-	tp := models.TokenPair{req.Access, req.Refresh}
+	tp := models.TokenPair{
+		Access:  req.Access,
+		Refresh: req.Refresh,
+	}
 
 	newTp, err := r.as.RefreshTokenPair(c.Request.Context(), tp, c.ClientIP())
 	if err != nil {

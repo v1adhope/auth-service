@@ -2,20 +2,18 @@ package repositories
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/Masterminds/squirrel"
+	"github.com/jackc/pgx/v5"
 	"github.com/v1adhope/auth-service/internal/models"
-	"github.com/v1adhope/auth-service/pkg/postgresql"
 )
 
-type Auth struct {
-	*postgresql.Postgres
-}
-
-func (r *Auth) Store(ctx context.Context, token string) error {
+func (r *Repos) StoreToken(ctx context.Context, id, token string) error {
 	sql, args, err := r.Builder.Insert("auth_whitelist").
 		SetMap(squirrel.Eq{
+			"id":    id,
 			"token": token,
 		}).ToSql()
 	if err != nil {
@@ -29,36 +27,34 @@ func (r *Auth) Store(ctx context.Context, token string) error {
 	return nil
 }
 
-func (r *Auth) Check(ctx context.Context, token string) error {
-	sql, args, err := r.Builder.Select("1").
-		Prefix("select exists (").
+func (r *Repos) GetToken(ctx context.Context, id string) (string, error) {
+	sql, args, err := r.Builder.Select("token").
 		From("auth_whitelist").
 		Where(squirrel.Eq{
-			"token": token,
+			"id": id,
 		}).
-		Suffix(")").
 		ToSql()
 	if err != nil {
-		return fmt.Errorf("repositories: auth: Check: ToSql: %w", err)
+		return "", fmt.Errorf("repositories: auth: Get: ToSql: %w", err)
 	}
 
-	ok := true
+	token := ""
 
-	if err := r.Pool.QueryRow(ctx, sql, args...).Scan(&ok); err != nil {
-		return fmt.Errorf("repositories: auth: Check: Scan: %w", err)
+	if err := r.Pool.QueryRow(ctx, sql, args...).Scan(&token); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", models.ErrNotValidTokens
+		}
+
+		return "", fmt.Errorf("repositories: auth: Get: ToSql: %w", err)
 	}
 
-	if !ok {
-		return models.ErrNotValidTokens
-	}
-
-	return nil
+	return token, nil
 }
 
-func (r *Auth) Destroy(ctx context.Context, token string) error {
+func (r *Repos) DestroyToken(ctx context.Context, id string) error {
 	sql, args, err := r.Builder.Delete("auth_whitelist").
 		Where(squirrel.Eq{
-			"token": token,
+			"id": id,
 		}).
 		ToSql()
 	if err != nil {

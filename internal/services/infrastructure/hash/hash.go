@@ -20,3 +20,7 @@ func (h *Hash) Do(target string) (string, error) {
 
 	return string(hashBytes), nil
 }
+
+func (h *Hash) Check(hashedTarget, target string) error {
+	return bcrypt.CompareHashAndPassword([]byte(hashedTarget), []byte(target))
+}

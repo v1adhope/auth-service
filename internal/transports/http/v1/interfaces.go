@@ -7,7 +7,7 @@ import (
 )
 
 type AuthService interface {
-	GenerateTokenPair(ctx context.Context, id string, ip string) (models.TokenPair, error)
+	GenerateTokenPair(ctx context.Context, userId string, ip string) (models.TokenPair, error)
 	RefreshTokenPair(ctx context.Context, tp models.TokenPair, ip string) (models.TokenPair, error)
 }
 

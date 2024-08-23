@@ -13,11 +13,9 @@ type Postgres struct {
 	Builder squirrel.StatementBuilderType
 }
 
-type Config struct {
-	ConnStr string
-}
+func Build(ctx context.Context, opts ...Option) (*Postgres, error) {
+	cfg := config(opts...)
 
-func Build(ctx context.Context, cfg Config) (*Postgres, error) {
 	pool, err := pgxpool.New(ctx, cfg.ConnStr)
 	if err != nil {
 		return nil, fmt.Errorf("postgresql: postgresql: Build: New: %w", err)

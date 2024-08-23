@@ -16,23 +16,10 @@ type Log struct {
 	*slog.Logger
 }
 
-type Config struct {
-	Level string
-}
+func New(opts ...Option) *Log {
+	cfg := config(opts...)
 
-func New(cfg Config) *Log {
-	opts := slog.HandlerOptions{}
-
-	switch cfg.Level {
-	case "debug":
-		opts.Level = slog.LevelDebug
-	case "error":
-		opts.Level = slog.LevelError
-	default:
-		opts.Level = slog.LevelInfo
-	}
-
-	log := slog.New(slog.NewJSONHandler(os.Stdout, &opts))
+	log := slog.New(slog.NewJSONHandler(os.Stdout, &cfg))
 
 	slog.SetDefault(log)
 

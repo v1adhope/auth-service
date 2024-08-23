@@ -6,23 +6,25 @@ import (
 	"github.com/v1adhope/auth-service/internal/models"
 )
 
-type Allerter interface {
+type Alerter interface {
 	Do(email, msg string) error
 }
 
 type AuthRepo interface {
-	Store(ctx context.Context, token string) error
-	Check(ctx context.Context, token string) error
-	Destroy(ctx context.Context, token string) error
+	StoreToken(ctx context.Context, id, token string) error
+	GetToken(ctx context.Context, id string) (string, error)
+	DestroyToken(ctx context.Context, id string) error
 }
 
 type Hasher interface {
 	Do(target string) (string, error)
+	Check(hashedTarget, target string) error
 }
 
 type TokenManager interface {
-	GeneratePair(id string, ip string) (models.TokenPair, error)
-	RefreshPair(tp models.TokenPair, ip string) (newTp models.TokenPair, isIpChanged bool, err error)
+	GeneratePair(userId string, ip string) (models.TokenPair, error)
+	ExtractRefreshPayload(token string) (string, error)
+	ExtractAccessPayload(token string) (userId, id, ip string, err error)
 }
 
 type Validater interface {
