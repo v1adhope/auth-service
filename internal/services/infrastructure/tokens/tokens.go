@@ -56,6 +56,7 @@ func New(opts ...Option) *Tokens {
 	return t
 }
 
+// INFO: not invariant values might be used as deps for testing
 func (t *Tokens) GeneratePair(ip string, userId string) (models.TokenPair, error) {
 	id, err := uuid.NewV6()
 	if err != nil {
@@ -107,7 +108,7 @@ func (t *Tokens) generateRefresh(id string) (string, error) {
 func (t *Tokens) ExtractRefreshPayload(token string) (string, error) {
 	text, err := serialization.DecryptByGcm([]byte(token), t.refresh.key)
 	if err != nil {
-		return "", models.ErrNotValidTokens
+		return "", fmt.Errorf("tokens: tokens: ExtractRefreshPayload: DecryptByGcm: %w", models.ErrNotValidTokens)
 	}
 
 	return string(text), nil
@@ -127,18 +128,18 @@ func (t *Tokens) ExtractAccessPayload(token string) (userId, id, ip string, err 
 func (t *Tokens) parseAccess(target string) (accessClaims, error) {
 	accessT, err := jwt.ParseWithClaims(target, &accessClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, models.ErrNotValidTokens
+			return nil, fmt.Errorf("tokens: tokens: parseAccess: ParseWithClaims: %w", models.ErrNotValidTokens)
 		}
 
 		return []byte(t.access.key), nil
 	})
 	if err != nil {
-		return accessClaims{}, fmt.Errorf("tokens: tokens: ParseAccess: Parse: %w", err)
+		return accessClaims{}, fmt.Errorf("tokens: tokens: parseAccess: Parse: %w", err)
 	}
 
 	claims, ok := accessT.Claims.(*accessClaims)
 	if !ok {
-		return accessClaims{}, models.ErrNotValidTokens
+		return accessClaims{}, fmt.Errorf("tokens: tokens: parseAccess: Claims: %w", models.ErrNotValidTokens)
 	}
 
 	return *claims, nil

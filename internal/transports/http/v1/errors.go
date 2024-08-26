@@ -27,24 +27,24 @@ func errorsHandler(log Logger) gin.HandlerFunc {
 		c.Next()
 
 		for _, ginErr := range c.Errors {
-			err, errType := ginErr.Err, ginErr.Type
+			err, errType := errors.Unwrap(ginErr.Err), ginErr.Type
 
 			switch errType {
 			case gin.ErrorTypeBind:
-				log.Debug(err, "%s", "StatusUnprocessableEntity")
+				log.Debug(ginErr, "%s", "StatusUnprocessableEntity")
 				c.Status(http.StatusUnprocessableEntity)
 				return
 			case gin.ErrorTypeAny:
 				switch {
 				case errors.Is(err, models.ErrNotValidTokens),
 					errors.Is(err, models.ErrNotValidGuid):
-					log.Debug(err, "%s", "StatusBadRequest")
+					log.Debug(ginErr, "%s", "StatusBadRequest")
 					abortWithErrorMsg(c, http.StatusBadRequest, err.Error())
 					return
 				}
 			}
 
-			log.Error(err, "%s", "StatusTeapot")
+			log.Error(ginErr, "%s", "StatusTeapot")
 			c.AbortWithStatus(http.StatusTeapot)
 			return
 		}

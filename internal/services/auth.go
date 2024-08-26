@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/v1adhope/auth-service/internal/models"
@@ -50,16 +51,16 @@ func (s *Services) RefreshTokenPair(ctx context.Context, tp models.TokenPair, ip
 	}
 
 	if err := s.Hash.Check(storeT, tp.Refresh); err != nil {
-		return models.TokenPair{}, models.ErrNotValidTokens
+		return models.TokenPair{}, err
 	}
 
 	idAccessT, ipAccessT, userId, err := s.TokenManager.ExtractAccessPayload(tp.Access)
 	if err != nil {
-		return models.TokenPair{}, models.ErrNotValidTokens
+		return models.TokenPair{}, err
 	}
 
 	if idAccessT != tp.Id {
-		return models.TokenPair{}, models.ErrNotValidTokens
+		return models.TokenPair{}, fmt.Errorf("services: auth: RefreshTokenPair: not equal ids: %w", models.ErrNotValidTokens)
 	}
 
 	if ip != ipAccessT {

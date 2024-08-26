@@ -1,6 +1,8 @@
 package validator
 
 import (
+	"fmt"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/v1adhope/auth-service/internal/models"
 )
@@ -23,7 +25,7 @@ func (v *Validator) ValidateGuid(target string) error {
 	guid := guid{target}
 
 	if err := v.Struct(&guid); err != nil {
-		return models.ErrNotValidGuid
+		return fmt.Errorf("validator: validator: ValidateGuid: Struct: %w", models.ErrNotValidGuid)
 	}
 
 	return nil

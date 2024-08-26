@@ -19,11 +19,11 @@ func (r *Repos) StoreToken(ctx context.Context, id, token string, now time.Time)
 			"token":      token,
 		}).ToSql()
 	if err != nil {
-		return fmt.Errorf("repositories: auth: Store: ToSql: %w", err)
+		return fmt.Errorf("repositories: auth: StoreToken: ToSql: %w", err)
 	}
 
 	if _, err := r.Pool.Exec(ctx, sql, args...); err != nil {
-		return fmt.Errorf("repositories: auth: Store: Exec: %w", err)
+		return fmt.Errorf("repositories: auth: StoreToken: Exec: %w", err)
 	}
 
 	return nil
@@ -37,17 +37,17 @@ func (r *Repos) GetToken(ctx context.Context, id string) (string, error) {
 		}).
 		ToSql()
 	if err != nil {
-		return "", fmt.Errorf("repositories: auth: Get: ToSql: %w", err)
+		return "", fmt.Errorf("repositories: auth: GetToken: ToSql: %w", err)
 	}
 
 	token := ""
 
 	if err := r.Pool.QueryRow(ctx, sql, args...).Scan(&token); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return "", models.ErrNotValidTokens
+			return "", fmt.Errorf("repositories: auth: GetToken: Scan: %w", models.ErrNotValidTokens)
 		}
 
-		return "", fmt.Errorf("repositories: auth: Get: ToSql: %w", err)
+		return "", fmt.Errorf("repositories: auth: GetToken: ToSql: %w", err)
 	}
 
 	return token, nil
@@ -60,11 +60,11 @@ func (r *Repos) DestroyToken(ctx context.Context, id string) error {
 		}).
 		ToSql()
 	if err != nil {
-		return fmt.Errorf("repositories: auth: Destroy: ToSql: %w", err)
+		return fmt.Errorf("repositories: auth: DestroyToken: ToSql: %w", err)
 	}
 
 	if _, err := r.Pool.Exec(ctx, sql, args...); err != nil {
-		return fmt.Errorf("repositories: auth: Destroy: Exec: %w", err)
+		return fmt.Errorf("repositories: auth: DestroyToken: Exec: %w", err)
 	}
 
 	return nil

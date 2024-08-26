@@ -1,55 +1,34 @@
-# Draft
+# Endpoints
 
-REST
-
-`access JWT SHA512`
-
-`refresh base64` store as `bcrypt hash` can be used only once
-
-Refresh valid only for tokens from the same session
-
-`payload: ip`
-
-If ip was changed send allert to user email (mock)
-
-## Get token pair with GUID as req param
+## Generate tokens
 
 POST /tokens/{guid}
 
 ```json
 {
-    "access": "<SOME_TOKEN>",
-    "refresh": "<SOME_TOKEN>"
+    "accessToken": "<SOME_TOKEN>",
+    "refreshToken": "<SOME_TOKEN>"
 }
 ```
 resp
 
-```errs
-internal
-not valid guid
-```
 
-## Refresh tokens (req `access` and `refresh` from equal session)
+## Refresh tokens
 
 POST /tokens/refresh
 
 ```json
 {
-    "access": "<SOME_TOKEN>",
-    "refresh": "<SOME_TOKEN>"
+    "accessToken": "<SOME_TOKEN>",
+    "refreshToken": "<SOME_TOKEN>"
 }
 ```
-req
+req body
 
 ```json
 {
-    "access": "<SOME_TOKEN>",
-    "refresh": "<SOME_TOKEN>"
+    "accessToken": "<SOME_TOKEN>",
+    "refreshToken": "<SOME_TOKEN>"
 }
 ```
 resp
-
-```errs
-internal
-not valid token pair
-```
