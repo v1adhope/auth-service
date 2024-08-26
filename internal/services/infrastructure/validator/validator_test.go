@@ -12,7 +12,7 @@ func setUp() *validator.Validator {
 	return validator.New()
 }
 
-func TestValidateGuidPositive(t *testing.T) {
+func TestValidateGuid(t *testing.T) {
 	v := setUp()
 
 	tcs := []struct {

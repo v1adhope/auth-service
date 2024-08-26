@@ -52,7 +52,7 @@ func Run(ctx context.Context, cfg Config) error {
 		logger.WithLevel(cfg.Logger.Level),
 	)
 
-	router := httpv1.New(services, log).Handler(
+	handler := httpv1.New(services, log).Handler(
 		httpv1.WithAllowOrigins(cfg.Server.AllowOrigins),
 		httpv1.WithAllowMethods(cfg.Server.AllowMethods),
 		httpv1.WithAllowHeaders(cfg.Server.AllowHeaders),
@@ -60,7 +60,7 @@ func Run(ctx context.Context, cfg Config) error {
 	)
 
 	s := httpserver.New(
-		router,
+		handler,
 		httpserver.WithSocket(cfg.Server.Socket),
 		httpserver.WithShutdownTimeout(cfg.Server.ShutdownTimeout),
 		httpserver.WithWriteTimeout(cfg.Server.WriteTimeout),
