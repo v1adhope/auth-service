@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"time"
 
 	"github.com/v1adhope/auth-service/internal/models"
 )
@@ -21,7 +22,7 @@ func (s *Services) GenerateTokenPair(ctx context.Context, userId string, ip stri
 		return models.TokenPair{}, err
 	}
 
-	if err := s.AuthRepo.StoreToken(ctx, tp.Id, storeT); err != nil {
+	if err := s.AuthRepo.StoreToken(ctx, tp.Id, storeT, time.Now()); err != nil {
 		return models.TokenPair{}, err
 	}
 

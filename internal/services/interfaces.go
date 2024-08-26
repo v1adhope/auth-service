@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"time"
 
 	"github.com/v1adhope/auth-service/internal/models"
 )
@@ -11,7 +12,7 @@ type Alerter interface {
 }
 
 type AuthRepo interface {
-	StoreToken(ctx context.Context, id, token string) error
+	StoreToken(ctx context.Context, id, token string, now time.Time) error
 	GetToken(ctx context.Context, id string) (string, error)
 	DestroyToken(ctx context.Context, id string) error
 }

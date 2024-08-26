@@ -4,17 +4,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx/v5"
 	"github.com/v1adhope/auth-service/internal/models"
 )
 
-func (r *Repos) StoreToken(ctx context.Context, id, token string) error {
+func (r *Repos) StoreToken(ctx context.Context, id, token string, now time.Time) error {
 	sql, args, err := r.Builder.Insert("auth_whitelist").
 		SetMap(squirrel.Eq{
-			"id":    id,
-			"token": token,
+			"id":         id,
+			"created_at": now,
+			"token":      token,
 		}).ToSql()
 	if err != nil {
 		return fmt.Errorf("repositories: auth: Store: ToSql: %w", err)

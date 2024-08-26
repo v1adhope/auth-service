@@ -6,6 +6,7 @@ env:
   POSTGRES_USER: rat
   POSTGRES_DB: auth_service
   POSTGRES_MIGRATE_NUMBER: 1
+  CUT_TOKENS_FROM: "2024-08-26 07:16:25.667081"
 
 tasks:
   build:
@@ -43,3 +44,7 @@ tasks:
   migrate-force:
     cmds:
       - ./scripts/tasks/migrate-force.sh
+
+  collect-old-storeT:
+    cmds:
+      - ./scripts/tasks/collectOldStoreTokens.sh
