@@ -35,9 +35,9 @@ func TestValidateGuid(t *testing.T) {
 
 	for _, tc := range tcs {
 		t.Run("", func(t *testing.T) {
-			err := v.ValidateGuid(tc.input)
+			sut := v.ValidateGuid(tc.input)
 
-			assert.NoError(t, err, tc.key)
+			assert.NoError(t, sut, tc.key)
 		})
 	}
 }
@@ -65,9 +65,9 @@ func TestValidateGuidNegative(t *testing.T) {
 
 	for _, tc := range tcs {
 		t.Run("", func(t *testing.T) {
-			err := v.ValidateGuid(tc.input)
+			sut := v.ValidateGuid(tc.input)
 
-			assert.ErrorIs(t, err, models.ErrNotValidGuid, tc.key)
+			assert.ErrorIs(t, sut, models.ErrNotValidGuid, tc.key)
 		})
 	}
 }

@@ -22,9 +22,9 @@ type Hasher interface {
 }
 
 type TokenManager interface {
-	GeneratePair(userId string, ip string) (models.TokenPair, error)
+	GeneratePair(ip string, userId string) (models.TokenPair, error)
 	ExtractRefreshPayload(token string) (string, error)
-	ExtractAccessPayload(token string) (userId, id, ip string, err error)
+	ExtractAccessPayload(token string) (id, ip, userId string, err error)
 }
 
 type Validater interface {

@@ -11,7 +11,7 @@ func (s *Services) GenerateTokenPair(ctx context.Context, userId string, ip stri
 		return models.TokenPair{}, err
 	}
 
-	tp, err := s.TokenManager.GeneratePair(userId, ip)
+	tp, err := s.TokenManager.GeneratePair(ip, userId)
 	if err != nil {
 		return models.TokenPair{}, err
 	}
@@ -52,7 +52,7 @@ func (s *Services) RefreshTokenPair(ctx context.Context, tp models.TokenPair, ip
 		return models.TokenPair{}, models.ErrNotValidTokens
 	}
 
-	userId, idAccessT, ipAccessT, err := s.TokenManager.ExtractAccessPayload(tp.Access)
+	idAccessT, ipAccessT, userId, err := s.TokenManager.ExtractAccessPayload(tp.Access)
 	if err != nil {
 		return models.TokenPair{}, models.ErrNotValidTokens
 	}
@@ -71,21 +71,5 @@ func (s *Services) RefreshTokenPair(ctx context.Context, tp models.TokenPair, ip
 		return models.TokenPair{}, err
 	}
 
-	newTp, err := s.TokenManager.GeneratePair(userId, ip)
-	if err != nil {
-		return models.TokenPair{}, err
-	}
-
-	storeT, err = s.Hash.Do(newTp.Refresh)
-	if err != nil {
-		return models.TokenPair{}, err
-	}
-
-	if err := s.AuthRepo.StoreToken(ctx, newTp.Id, storeT); err != nil {
-		return models.TokenPair{}, err
-	}
-
-	newTp.Refresh = EncodeBase64(newTp.Refresh)
-
-	return newTp, nil
+	return s.GenerateTokenPair(ctx, userId, ip)
 }
